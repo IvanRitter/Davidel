@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Davidel</title>
+<style>
+:root {
+  --bg: #121213;
+  --tile: #3a3a3c;
+  --border: #565758;
+  --green: #538d4e;
+  --yellow: #b59f3b;
+  --gray: #3a3a3c;
+  --key: #818384;
+  --text: #fff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: Arial, Helvetica, sans-serif; display: flex;
+  flex-direction: column; align-items: center; overflow-x: hidden;
+  position: relative;
+}
+header {
+  width: 100%; text-align: center; border-bottom: 1px solid #333;
+  padding: 12px 0; font-weight: bold; letter-spacing: 4px;
+}
+#board { margin-top:20px; display:grid; grid-template-rows: repeat(6, 1fr); gap:5px;}
+.row { display:grid; grid-template-columns: repeat(7, 1fr); gap:5px; }
+.tile {
+  width: min(12vw,60px); height: min(12vw,60px); border:2px solid var(--border);
+  background: var(--tile); display:flex; align-items:center; justify-content:center;
+  font-size:min(7vw,32px); font-weight:bold; text-transform:uppercase;
+}
+.filled { border-color:#888; }
+.flip { animation: flip 0.6s ease forwards; }
+@keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+.correct { background: var(--green); border-color: var(--green); }
+.present { background: var(--yellow); border-color: var(--yellow); }
+.absent { background: var(--gray); border-color: var(--gray); }
+.shake { animation: shake 0.4s; }
+@keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
+.bounce { animation: bounce 0.6s; }
+@keyframes bounce { 0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);} }
+#keyboard { margin:20px 0; width:100%; max-width:500px; padding:0 8px; }
+.key-row { display:flex; justify-content:center; margin-bottom:8px; }
+.key-row.offset { padding-left:16px; }
+.key { height:58px; margin:0 3px; padding:0; min-width:43px; border:none; border-radius:4px;
+  background: var(--key); color:white; font-weight:bold; font-size:14px; cursor:pointer; text-transform:uppercase;}
+.key.wide { min-width:65px; }
+.key.correct { background: var(--green); }
+.key.present { background: var(--yellow); }
+.key.absent { background: var(--gray); }
+@media(max-width:400px){ .key { min-width:36px;height:52px;font-size:12px;} .key.wide{min-width:55px;} }
+
+#extraLife, #secretOverlay {
+  position: fixed; top:50%; left:50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: #222; color: #fff; font-size: 2rem; padding: 20px 40px;
+  border-radius:12px; text-align:center; z-index:1000; pointer-events:none;
+  transition: transform 0.5s ease-out;
+}
+#extraLife.show, #secretOverlay.show { transform: translate(-50%, -50%) scale(1); }
+
+/* Confetti */
+.confetti {
+  position: fixed; top:-10px; width:10px; height:10px; opacity:0.9;
+  z-index:999; pointer-events:none;
+  animation: fall linear forwards;
+}
+@keyframes fall { 0%{transform:translateY(0) rotate(0deg);} 100%{transform:translateY(110vh) rotate(360deg); opacity:0;} }
+</style>
+</head>
+<body>
+<header>Davidel</header>
+<p>Something David like for his birthday...</p>
+<div id="board"></div>
+
+
+
+<div id="keyboard">
+  <div class="key-row">
+    <button class="key">Q</button><button class="key">W</button><button class="key">E</button>
+    <button class="key">R</button><button class="key">T</button><button class="key">Y</button>
+    <button class="key">U</button><button class="key">I</button><button class="key">O</button>
+    <button class="key">P</button>
+  </div>
+  <div class="key-row offset">
+    <button class="key">A</button><button class="key">S</button><button class="key">D</button>
+    <button class="key">F</button><button class="key">G</button><button class="key">H</button>
+    <button class="key">J</button><button class="key">K</button><button class="key">L</button>
+  </div>
+  <div class="key-row">
+    <button class="key wide">Enter</button>
+    <button class="key">Z</button><button class="key">X</button><button class="key">C</button>
+    <button class="key">V</button><button class="key">B</button><button class="key">N</button>
+    <button class="key">M</button>
+    <button class="key wide">⌫</button>
+  </div>
+</div>
+
+<div id="extraLife">Extra Life!</div>
+<div id="secretOverlay"><div>The secret is</div><div>KrustenTier33</div></div>
+
+<script>
+const ANSWER="KONZERT";
+const WORD_LENGTH=7;
+const MAX_GUESSES=6;
+
+let row=0,col=0;
+let guesses=Array(MAX_GUESSES).fill("");
+
+const board=document.getElementById("board");
+const keys=document.querySelectorAll(".key");
+const extraLife=document.getElementById("extraLife");
+const secretOverlay=document.getElementById("secretOverlay");
+
+// Build board
+for(let r=0;r<MAX_GUESSES;r++){
+  const rowDiv=document.createElement("div"); rowDiv.className="row";
+  for(let c=0;c<WORD_LENGTH;c++){
+    const tile=document.createElement("div"); tile.className="tile";
+    rowDiv.appendChild(tile);
+  }
+  board.appendChild(rowDiv);
+}
+
+// Keyboard clicks
+keys.forEach(k=>k.addEventListener("click",()=>handleKey(k.textContent)));
+document.addEventListener("keydown",e=>{
+  let k=e.key.toUpperCase();
+  if(k==="BACKSPACE") k="⌫";
+  if(k==="ENTER") k="Enter";
+  handleKey(k);
+});
+
+function handleKey(k){
+  if(row>=MAX_GUESSES) return;
+  if(k==="⌫" && col>0){ col--; guesses[row]=guesses[row].slice(0,-1); renderRow(); return; }
+  if(k==="Enter"){ if(col!==WORD_LENGTH){shakeRow();return;} submitGuess(); return; }
+  if(/^[A-Z]$/.test(k) && col<WORD_LENGTH){ guesses[row]+=k; col++; renderRow(); }
+}
+
+function renderRow(){
+  const tiles=board.children[row].children;
+  [...tiles].forEach((t,i)=>{ t.textContent=guesses[row][i]||""; t.classList.toggle("filled",!!guesses[row][i]); });
+}
+
+function shakeRow(){ const r=board.children[row]; r.classList.add("shake"); setTimeout(()=>r.classList.remove("shake"),400); }
+
+function submitGuess(){
+  const guess=guesses[row];
+  const tiles=board.children[row].children;
+  const answerArr=ANSWER.split("");
+  const result=Array(WORD_LENGTH).fill("absent");
+
+  for(let i=0;i<WORD_LENGTH;i++){ if(guess[i]===answerArr[i]){ result[i]="correct"; answerArr[i]=null; } }
+  for(let i=0;i<WORD_LENGTH;i++){ if(result[i]==="absent" && answerArr.includes(guess[i])){ result[i]="present"; answerArr[answerArr.indexOf(guess[i])]=null; } }
+
+  [...tiles].forEach((tile,i)=>{ setTimeout(()=>{ tile.classList.add("flip"); tile.classList.add(result[i]); updateKey(guess[i],result[i]); if(guess===ANSWER) tile.classList.add("bounce"); }, i*300); });
+
+  if(guess===ANSWER){ setTimeout(()=>{launchConfetti();}, WORD_LENGTH*300+400); row=MAX_GUESSES; return; }
+
+  row++; col=0;
+  if(row===MAX_GUESSES) setTimeout(()=>extraLifeLoss(), WORD_LENGTH*300+400);
+}
+
+function updateKey(letter,state){ keys.forEach(k=>{ if(k.textContent===letter){ if(k.classList.contains("correct")||(k.classList.contains("present")&&state==="absent")) return; k.classList.remove("present","absent"); k.classList.add(state); } }); }
+
+// Confetti
+function launchConfetti(){
+  const colors=["#f44336","#2196F3","#FFEB3B","#4CAF50","#FF9800","#9C27B0","#E91E63"];
+  for(let i=0;i<100;i++){
+    const c=document.createElement("div"); c.className="confetti";
+    c.style.backgroundColor=colors[Math.floor(Math.random()*colors.length)];
+    c.style.left=(Math.random()*100)+"vw";
+    const size=5+Math.random()*10; c.style.width=size+"px"; c.style.height=size+"px";
+    const duration=3+Math.random()*3; c.style.animationDuration=duration+"s";
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), (duration+1)*1000);
+  }
+  // Show secret after confetti duration
+  setTimeout(()=>secretOverlay.classList.add("show"),4000);
+}
+
+// Extra Life animation
+function extraLifeLoss(){
+  extraLife.classList.add("show");
+  setTimeout(()=>extraLife.classList.remove("show"),1500);
+
+  // Erase all letters
+  for(let r=0;r<MAX_GUESSES;r++){
+    guesses[r]="";
+    const tiles=board.children[r].children;
+    [...tiles].forEach(t=>{ t.textContent=""; t.className="tile"; });
+  }
+  row=0; col=0;
+}
+</script>
+</body>
+</html>
