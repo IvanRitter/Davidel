@@ -20,18 +20,20 @@ body {
   margin: 0; background: var(--bg); color: var(--text);
   font-family: Arial, Helvetica, sans-serif; display: flex;
   flex-direction: column; align-items: center; overflow-x: hidden;
-  position: relative;
+  position: relative; padding-bottom:20px;
 }
 header {
   width: 100%; text-align: center; border-bottom: 1px solid #333;
-  padding: 12px 0; font-weight: bold; letter-spacing: 4px;
+  padding: 12px 0; font-weight: bold; letter-spacing: 4px; font-size:18px;
 }
 #board { margin-top:20px; display:grid; grid-template-rows: repeat(6, 1fr); gap:5px;}
 .row { display:grid; grid-template-columns: repeat(7, 1fr); gap:5px; }
 .tile {
-  width: min(12vw,60px); height: min(12vw,60px); border:2px solid var(--border);
-  background: var(--tile); display:flex; align-items:center; justify-content:center;
-  font-size:min(7vw,32px); font-weight:bold; text-transform:uppercase;
+  width: 12vw; height: 12vw; max-width:50px; max-height:50px;
+  border:2px solid var(--border); background: var(--tile);
+  display:flex; align-items:center; justify-content:center;
+  font-size:6vw; font-weight:bold; text-transform:uppercase;
+  transition: all 0.2s ease;
 }
 .filled { border-color:#888; }
 .flip { animation: flip 0.6s ease forwards; }
@@ -40,44 +42,51 @@ header {
 .present { background: var(--yellow); border-color: var(--yellow); }
 .absent { background: var(--gray); border-color: var(--gray); }
 .shake { animation: shake 0.4s; }
-@keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
+@keyframes shake { 0%{transform:translateX(0);}25%{transform:translateX(-5px);}50%{transform:translateX(5px);}75%{transform:translateX(-5px);}100%{transform:translateX(0);} }
 .bounce { animation: bounce 0.6s; }
 @keyframes bounce { 0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);} }
-#keyboard { margin:20px 0; width:100%; max-width:500px; padding:0 8px; }
-.key-row { display:flex; justify-content:center; margin-bottom:8px; }
-.key-row.offset { padding-left:16px; }
-.key { height:58px; margin:0 3px; padding:0; min-width:43px; border:none; border-radius:4px;
-  background: var(--key); color:white; font-weight:bold; font-size:14px; cursor:pointer; text-transform:uppercase;}
-.key.wide { min-width:65px; }
+
+#keyboard { margin:15px 0; width:100%; max-width:360px; padding:0 5px; }
+.key-row { display:flex; justify-content:center; margin-bottom:6px; }
+.key-row.offset { padding-left:12px; }
+.key { height:48px; margin:0 2px; min-width:36px; border:none; border-radius:4px;
+  background: var(--key); color:white; font-weight:bold; font-size:12px; cursor:pointer; text-transform:uppercase;
+  transition: all 0.1s ease;
+}
+.key.wide { min-width:55px; }
 .key.correct { background: var(--green); }
 .key.present { background: var(--yellow); }
 .key.absent { background: var(--gray); }
-@media(max-width:400px){ .key { min-width:36px;height:52px;font-size:12px;} .key.wide{min-width:55px;} }
+.key:active { transform:scale(0.95); }
 
 #extraLife, #secretOverlay {
   position: fixed; top:50%; left:50%;
   transform: translate(-50%, -50%) scale(0);
-  background: #222; color: #fff; font-size: 2rem; padding: 20px 40px;
+  background: #222; color: #fff; font-size: 1.6rem; padding: 18px 30px;
   border-radius:12px; text-align:center; z-index:1000; pointer-events:none;
   transition: transform 0.5s ease-out;
 }
 #extraLife.show, #secretOverlay.show { transform: translate(-50%, -50%) scale(1); }
 
-/* Confetti */
 .confetti {
-  position: fixed; top:-10px; width:10px; height:10px; opacity:0.9;
-  z-index:999; pointer-events:none;
-  animation: fall linear forwards;
+  position: fixed; top:-10px; width:8px; height:8px; opacity:0.9;
+  z-index:999; pointer-events:none; animation: fall linear forwards;
 }
 @keyframes fall { 0%{transform:translateY(0) rotate(0deg);} 100%{transform:translateY(110vh) rotate(360deg); opacity:0;} }
+
+@media(max-width:414px){
+  .tile { width: 12vw; height: 12vw; font-size:5vw; }
+  #keyboard { max-width:360px; }
+  .key { min-width:32px; height:44px; font-size:11px; }
+  .key.wide { min-width:50px; }
+  header { font-size:16px; }
+}
 </style>
 </head>
 <body>
 <header>Davidel</header>
-<p>Something David like for his birthday...</p>
+<p>Something David likes for his birthday...</p>
 <div id="board"></div>
-
-
 
 <div id="keyboard">
   <div class="key-row">
@@ -180,7 +189,6 @@ function launchConfetti(){
     document.body.appendChild(c);
     setTimeout(()=>c.remove(), (duration+1)*1000);
   }
-  // Show secret after confetti duration
   setTimeout(()=>secretOverlay.classList.add("show"),4000);
 }
 
@@ -189,7 +197,6 @@ function extraLifeLoss(){
   extraLife.classList.add("show");
   setTimeout(()=>extraLife.classList.remove("show"),1500);
 
-  // Erase all letters
   for(let r=0;r<MAX_GUESSES;r++){
     guesses[r]="";
     const tiles=board.children[r].children;
